@@ -18,6 +18,37 @@ const (
 
 type Parser struct{}
 
+func getDescriptionFromArticle(httpClient http.Client, url string) string {
+	// Try to get the description from inside the article
+	// Soft fail to empty string in case of any error
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return ""
+	}
+	req.Header.Set("User-Agent", "rss-builder")
+
+	res, err := httpClient.Do(req)
+	if err != nil {
+		return ""
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return ""
+	}
+
+	doc, err := goquery.NewDocumentFromReader(res.Body)
+	if err != nil {
+		return ""
+	}
+
+	description := doc.Find("h2.c-detail__subtitle")
+	if description.Length() == 0 {
+		return ""
+	}
+	return strings.TrimSpace(description.Text())
+}
+
 func (Parser) Name() string { return "Gabriel Albiac (El Debate)" }
 func (Parser) URL() string  { return baseURL }
 func (Parser) Fetch() ([]rss.Item, error) {
@@ -94,7 +125,7 @@ func (Parser) Fetch() ([]rss.Item, error) {
 		items = append(items, rss.Item{
 			Title:       title,
 			Link:        link,
-			Description: "",
+			Description: getDescriptionFromArticle(*httpClient, link),
 			GUID:        rss.NewGUID(link),
 			PubDate:     parsedDate.Format(rss.PubDateFormat),
 		})
