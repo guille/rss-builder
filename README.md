@@ -1,8 +1,10 @@
 # rss-builder
 
+[![Last scheduled run](https://github.com/guille/rss-builder/actions/workflows/deploy.yml/badge.svg?event=schedule)](https://github.com/guille/rss-builder/actions/workflows/deploy.yml)
+
 I use RSS to keep up with sites that interest me. However, not every website provides RSS, or one that is granular enough for my interest. So I built this.
 
-Every night, a scheduled Github Actions workflow runs main.go, which builds a RSS xml file and publishes it to Github Pages. I can then use my RSS reader to subscribe to these endpoints.
+Every night, a scheduled Github Actions workflow runs main.go, which builds a RSS xml file and publishes it to [Github Pages](https://guille.github.io/rss-builder/). I can then use my RSS reader to subscribe to these endpoints.
 
 ## Limitations
 
