@@ -13,7 +13,7 @@ import (
 
 const (
 	baseURL    = "https://www.spectator.co.uk/writer/rory-sutherland/?filter=article"
-	dateFormat = "2 Jan 2006"
+	dateFormat = "2 January 2006"
 )
 
 type Parser struct{}
