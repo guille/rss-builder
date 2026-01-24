@@ -1,0 +1,4 @@
+
+[tasks.run]
+description = "Generate RSS feeds"
+run = "go run main.go"

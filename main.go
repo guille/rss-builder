@@ -7,6 +7,7 @@ import (
 
 	"github.com/guille/rss-builder/rss"
 	"github.com/guille/rss-builder/sites/gabriel_albiac"
+	"github.com/guille/rss-builder/sites/kirshatrov"
 	"github.com/guille/rss-builder/sites/rory_sutherland"
 )
 
@@ -20,6 +21,7 @@ func main() {
 	parsers := []Parser{
 		gabriel_albiac.Parser{},
 		rory_sutherland.Parser{},
+		kirshatrov.Parser{},
 	}
 
 	const outputDir = "output"
