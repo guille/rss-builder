@@ -1,4 +1,20 @@
+[tools]
+go = "latest"
 
-[tasks.run]
+[tasks.rss]
 description = "Generate RSS feeds"
 run = "go run main.go"
+
+[tasks.clean]
+run = "go clean"
+
+[tasks.fmt]
+run = "go fmt ./..."
+
+[tasks.vet]
+depends = ["fmt"]
+run = "go vet ./..."
+
+[tasks.build]
+depends = ["vet"]
+run = "go build"
