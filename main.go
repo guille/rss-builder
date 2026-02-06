@@ -7,6 +7,7 @@ import (
 
 	"github.com/guille/rss-builder/rss"
 	"github.com/guille/rss-builder/sites/gabriel_albiac"
+	"github.com/guille/rss-builder/sites/ghostty"
 	"github.com/guille/rss-builder/sites/kirshatrov"
 	"github.com/guille/rss-builder/sites/rory_sutherland"
 )
@@ -22,6 +23,7 @@ func main() {
 		gabriel_albiac.Parser{},
 		rory_sutherland.Parser{},
 		kirshatrov.Parser{},
+		ghostty.Parser{},
 	}
 
 	const outputDir = "output"
