@@ -69,13 +69,12 @@ func (Parser) Fetch() ([]rss.Item, error) {
 			return
 		}
 
-		idx := strings.Index(parentText, key)
-		if idx == -1 {
+		_, date, ok := strings.Cut(parentText, key)
+		if !ok {
 			firstErr = fmt.Errorf("couldn't find release date in %s", parentText)
 			return
 		}
 
-		date := parentText[idx+len(key):]
 		parsedDate, perr := time.Parse(dateFormat, date)
 		if perr != nil {
 			firstErr = fmt.Errorf("parse date %q at index %d: %w", date, i, perr)

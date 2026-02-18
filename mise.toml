@@ -15,6 +15,10 @@ run = "go fmt ./..."
 depends = ["fmt"]
 run = "go vet ./..."
 
+[tasks.fix]
+depends = ["fmt"]
+run = "go fix ./..."
+
 [tasks.build]
 depends = ["vet"]
 run = "go build"
