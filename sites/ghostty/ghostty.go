@@ -52,50 +52,50 @@ func (Parser) Fetch() ([]rss.Item, error) {
 	)
 	const key = "Released on "
 
-	doc.Find("div ul li a[href*=\"release-notes\"]").Each(func(i int, s *goquery.Selection) {
-		if firstErr != nil {
-			return
-		}
-		parentText := strings.TrimSpace(s.Parent().Text())
-		if !strings.Contains(parentText, key) {
-			// Skip the sidebar links and all the other garbage...
-			return
-		}
+	doc.Find(`div ul li a[href*="release-notes"]`).EachWithBreak(
+		func(i int, s *goquery.Selection) bool {
+			parentText := strings.TrimSpace(s.Parent().Text())
+			if !strings.Contains(parentText, key) {
+				// Skip the sidebar links and all the other garbage...
+				return true
+			}
 
-		linkSel := s
-		title := strings.TrimSpace(linkSel.Text())
-		if title == "" {
-			firstErr = fmt.Errorf("empty title at index %d", i)
-			return
-		}
+			linkSel := s
+			title := strings.TrimSpace(linkSel.Text())
+			if title == "" {
+				firstErr = fmt.Errorf("empty title at index %d", i)
+				return false
+			}
 
-		_, date, ok := strings.Cut(parentText, key)
-		if !ok {
-			firstErr = fmt.Errorf("couldn't find release date in %s", parentText)
-			return
-		}
+			_, date, ok := strings.Cut(parentText, key)
+			if !ok {
+				firstErr = fmt.Errorf("couldn't find release date in %s", parentText)
+				return false
+			}
 
-		parsedDate, perr := time.Parse(dateFormat, date)
-		if perr != nil {
-			firstErr = fmt.Errorf("parse date %q at index %d: %w", date, i, perr)
-			return
-		}
+			parsedDate, perr := time.Parse(dateFormat, date)
+			if perr != nil {
+				firstErr = fmt.Errorf("parse date %q at index %d: %w", date, i, perr)
+				return false
+			}
 
-		relativeLink, exists := linkSel.Attr("href")
-		if !exists || relativeLink == "" {
-			firstErr = fmt.Errorf("empty link at index %d", i)
-			return
-		}
-		link := fmt.Sprintf("https://ghostty.org%v", relativeLink)
+			relativeLink, exists := linkSel.Attr("href")
+			if !exists || relativeLink == "" {
+				firstErr = fmt.Errorf("empty link at index %d", i)
+				return false
+			}
+			link := "https://ghostty.org" + relativeLink
 
-		items = append(items, rss.Item{
-			Title:       title,
-			Link:        link,
-			Description: "",
-			GUID:        rss.NewGUID(link),
-			PubDate:     parsedDate.Format(rss.PubDateFormat),
+			items = append(items, rss.Item{
+				Title:       title,
+				Link:        link,
+				Description: "",
+				GUID:        rss.NewGUID(link),
+				PubDate:     parsedDate.Format(rss.PubDateFormat),
+			})
+
+			return true
 		})
-	})
 
 	if firstErr != nil {
 		return nil, firstErr
