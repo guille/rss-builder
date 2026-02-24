@@ -18,36 +18,35 @@ const (
 
 type Parser struct{}
 
-func getDateFromArticle(httpClient http.Client, url string) string {
+func getDateFromArticle(httpClient *http.Client, url string) (string, error) {
 	// Get the Date from the article's footer
-	// Soft fail to empty string in case of any error
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return ""
+		return "", err
 	}
 	req.Header.Set("User-Agent", "rss-builder")
 
 	res, err := httpClient.Do(req)
 	if err != nil {
-		return ""
+		return "", err
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return ""
+		return "", err
 	}
 
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
-		return ""
+		return "", err
 	}
 
 	written_in := doc.Find(".text-base")
 	if written_in.Length() == 0 {
-		return ""
+		return "", err
 	}
 	// "Written in December 2025." ... Ugh
-	return strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(written_in.Text()), "Written in "), ".")
+	return strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(written_in.Text()), "Written in "), "."), nil
 }
 
 func (Parser) Name() string { return "Kir Shatrov" }
@@ -57,7 +56,7 @@ func (Parser) Fetch() ([]rss.Item, error) {
 		Timeout: 10 * time.Second,
 	}
 
-	req, err := http.NewRequest("GET", baseURL, nil)
+	req, err := http.NewRequest(http.MethodGet, baseURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
@@ -87,44 +86,46 @@ func (Parser) Fetch() ([]rss.Item, error) {
 	year := time.Now().Year()
 	anchor := fmt.Sprintf("#%d-ref", year)
 
-	doc.Find(anchor).Siblings().Each(func(i int, s *goquery.Selection) {
-		if firstErr != nil {
-			return
-		}
+	doc.Find(anchor).Siblings().EachWithBreak(
+		func(i int, s *goquery.Selection) bool {
+			title := strings.TrimSpace(s.Text())
+			if title == "" {
+				firstErr = fmt.Errorf("empty title at index %d", i)
+				return false
+			}
 
-		title := strings.TrimSpace(s.Text())
-		if title == "" {
-			firstErr = fmt.Errorf("empty title at index %d", i)
-			return
-		}
+			linkSel := s.Find("a")
+			if linkSel.Length() == 0 {
+				firstErr = fmt.Errorf("missing link selector at index %d", i)
+				return false
+			}
+			relativeLink, exists := linkSel.Attr("href")
+			if !exists || relativeLink == "" {
+				firstErr = fmt.Errorf("empty link at index %d", i)
+				return false
+			}
+			link := "https://kirshatrov.com" + relativeLink
 
-		linkSel := s.Find("a")
-		if linkSel.Length() == 0 {
-			firstErr = fmt.Errorf("missing link selector at index %d", i)
-			return
-		}
-		relativeLink, exists := linkSel.Attr("href")
-		if !exists || relativeLink == "" {
-			firstErr = fmt.Errorf("empty link at index %d", i)
-			return
-		}
-		link := fmt.Sprintf("https://kirshatrov.com%v", relativeLink)
+			inputDate, err := getDateFromArticle(httpClient, link)
+			if err != nil {
+				firstErr = fmt.Errorf("couldn't get date from %s", link)
+				return false
+			}
+			parsedDate, perr := time.Parse(dateFormat, inputDate)
+			if perr != nil {
+				firstErr = fmt.Errorf("parse date %q at index %d: %w", inputDate, i, perr)
+				return false
+			}
 
-		inputDate := getDateFromArticle(*httpClient, link)
-		parsedDate, perr := time.Parse(dateFormat, inputDate)
-		if perr != nil {
-			firstErr = fmt.Errorf("parse date %q at index %d: %w", inputDate, i, perr)
-			return
-		}
-
-		items = append(items, rss.Item{
-			Title:       title,
-			Link:        link,
-			Description: "",
-			GUID:        rss.NewGUID(link),
-			PubDate:     parsedDate.Format(rss.PubDateFormat),
+			items = append(items, rss.Item{
+				Title:       title,
+				Link:        link,
+				Description: "",
+				GUID:        rss.NewGUID(link),
+				PubDate:     parsedDate.Format(rss.PubDateFormat),
+			})
+			return true
 		})
-	})
 
 	if firstErr != nil {
 		return nil, firstErr

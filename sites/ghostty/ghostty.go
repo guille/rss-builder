@@ -25,7 +25,7 @@ func (Parser) Fetch() ([]rss.Item, error) {
 		Timeout: 10 * time.Second,
 	}
 
-	req, err := http.NewRequest("GET", baseURL, nil)
+	req, err := http.NewRequest(http.MethodGet, baseURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
