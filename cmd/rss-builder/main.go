@@ -5,11 +5,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/guille/rss-builder/rss"
-	"github.com/guille/rss-builder/sites/gabriel_albiac"
-	"github.com/guille/rss-builder/sites/ghostty"
-	"github.com/guille/rss-builder/sites/kirshatrov"
-	"github.com/guille/rss-builder/sites/rory_sutherland"
+	"github.com/guille/rss-builder/internal/rss"
+	"github.com/guille/rss-builder/internal/sites/gabriel_albiac"
+	"github.com/guille/rss-builder/internal/sites/ghostty"
+	"github.com/guille/rss-builder/internal/sites/kirshatrov"
+	"github.com/guille/rss-builder/internal/sites/rory_sutherland"
 )
 
 type Parser interface {

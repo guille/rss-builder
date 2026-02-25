@@ -1,4 +1,4 @@
-package gabriel_albiac
+package rory_sutherland
 
 import (
 	"fmt"
@@ -8,44 +8,17 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 
-	"github.com/guille/rss-builder/rss"
+	"github.com/guille/rss-builder/internal/rss"
 )
 
 const (
-	baseURL    = "https://www.eldebate.com/autor/gabriel-albiac/"
-	dateFormat = "02/01/2006"
+	baseURL    = "https://www.spectator.co.uk/writer/rory-sutherland/?filter=article&edition=uk"
+	dateFormat = "2 January 2006"
 )
 
 type Parser struct{}
 
-func getDescriptionFromArticle(httpClient *http.Client, url string) (string, error) {
-	// Try to get the description from inside the article
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("User-Agent", "rss-builder")
-
-	res, err := httpClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return "", err
-	}
-
-	doc, err := goquery.NewDocumentFromReader(res.Body)
-	if err != nil {
-		return "", err
-	}
-
-	description := doc.Find("h2.c-detail__subtitle").First().Text()
-	return strings.TrimSpace(description), nil
-}
-
-func (Parser) Name() string { return "Gabriel Albiac (El Debate)" }
+func (Parser) Name() string { return "Rory Sutherland (Spectator.co.uk)" }
 func (Parser) URL() string  { return baseURL }
 func (Parser) Fetch() ([]rss.Item, error) {
 	var httpClient = &http.Client{
@@ -60,7 +33,7 @@ func (Parser) Fetch() ([]rss.Item, error) {
 
 	res, err := httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("fetch eldebate: %w", err)
+		return nil, fmt.Errorf("fetch spectator: %w", err)
 	}
 	defer res.Body.Close()
 
@@ -78,9 +51,9 @@ func (Parser) Fetch() ([]rss.Item, error) {
 		firstErr error
 	)
 
-	doc.Find("article.c-article").EachWithBreak(
+	doc.Find("div.mosaic").EachWithBreak(
 		func(i int, s *goquery.Selection) bool {
-			titleSel := s.Find(".c-article__title")
+			titleSel := s.Find(".article__title")
 			if titleSel.Length() == 0 {
 				firstErr = fmt.Errorf("missing title selector at index %d", i)
 				return false
@@ -91,7 +64,7 @@ func (Parser) Fetch() ([]rss.Item, error) {
 				return false
 			}
 
-			dateSel := s.Find("div.date")
+			dateSel := s.Find("time.archive-entry__timestamp")
 			if dateSel.Length() == 0 {
 				firstErr = fmt.Errorf("missing date selector at index %d", i)
 				return false
@@ -103,23 +76,28 @@ func (Parser) Fetch() ([]rss.Item, error) {
 				return false
 			}
 
-			linkSel := s.Find("a.page-link")
+			linkSel := s.Find("a.article__title-link")
 			if linkSel.Length() == 0 {
 				firstErr = fmt.Errorf("missing link selector at index %d", i)
 				return false
 			}
-			relativeLink, exists := linkSel.Attr("href")
-			if !exists || relativeLink == "" {
+			link, exists := linkSel.Attr("href")
+			if !exists || link == "" {
 				firstErr = fmt.Errorf("empty link at index %d", i)
 				return false
 			}
-			link := fmt.Sprintf("https://www.eldebate.com%v", relativeLink)
-			desc, _ := getDescriptionFromArticle(httpClient, link)
+
+			descSel := s.Find("p.article__excerpt-text")
+			if descSel.Length() == 0 {
+				firstErr = fmt.Errorf("missing description selector at index %d", i)
+				return false
+			}
+			description := strings.TrimSpace(descSel.Text())
 
 			items = append(items, rss.Item{
 				Title:       title,
 				Link:        link,
-				Description: desc,
+				Description: description,
 				GUID:        rss.NewGUID(link),
 				PubDate:     parsedDate.Format(rss.PubDateFormat),
 			})

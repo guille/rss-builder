@@ -3,7 +3,7 @@ go = "latest"
 
 [tasks.rss]
 description = "Generate RSS feeds"
-run = "go run main.go"
+run = "go run cmd/rss-builder/main.go"
 
 [tasks.clean]
 run = "go clean"
@@ -19,6 +19,18 @@ run = "go vet ./..."
 depends = ["fmt"]
 run = "go fix ./..."
 
+[tasks.staticcheck]
+depends = ["fmt"]
+run = "staticcheck ./..."
+
+[tasks.govulncheck]
+depends = ["fmt"]
+run = "govulncheck ./..."
+
+
+[tasks.check]
+depends = ["vet", "fix", "staticcheck", "govulncheck"]
+
 [tasks.build]
-depends = ["vet"]
-run = "go build"
+depends = ["fmt"]
+run = "go build -o bin/rss-builder ./cmd/rss-builder"

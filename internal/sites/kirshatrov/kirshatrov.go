@@ -8,7 +8,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 
-	"github.com/guille/rss-builder/rss"
+	"github.com/guille/rss-builder/internal/rss"
 )
 
 const (

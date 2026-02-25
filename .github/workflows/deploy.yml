@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "stable"
-      - run: go run main.go
+      - run: go run cmd/rss-builder/main.go
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./output
