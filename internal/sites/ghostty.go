@@ -1,4 +1,4 @@
-package ghostty
+package sites
 
 import (
 	"fmt"
@@ -11,27 +11,21 @@ import (
 	"github.com/guille/rss-builder/internal/rss"
 )
 
-const (
-	baseURL    = "https://ghostty.org/docs/install/release-notes"
-	dateFormat = "January 2, 2006"
-)
+type GhosttyParser struct {
+	httpClient *http.Client
+}
 
-type Parser struct{}
-
-func (Parser) Name() string { return "Ghostty release notes" }
-func (Parser) URL() string  { return baseURL }
-func (Parser) Fetch() ([]rss.Item, error) {
-	var httpClient = &http.Client{
-		Timeout: 10 * time.Second,
-	}
-
-	req, err := http.NewRequest(http.MethodGet, baseURL, nil)
+func (GhosttyParser) Name() string         { return "Ghostty release notes" }
+func (GhosttyParser) URL() string          { return "https://ghostty.org/docs/install/release-notes" }
+func (p GhosttyParser) dateFormat() string { return "January 2, 2006" }
+func (p GhosttyParser) Fetch() ([]rss.Item, error) {
+	req, err := http.NewRequest(http.MethodGet, p.URL(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 	req.Header.Set("User-Agent", "rss-builder")
 
-	res, err := httpClient.Do(req)
+	res, err := p.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("fetch ghostty: %w", err)
 	}
@@ -73,7 +67,7 @@ func (Parser) Fetch() ([]rss.Item, error) {
 				return false
 			}
 
-			parsedDate, perr := time.Parse(dateFormat, date)
+			parsedDate, perr := time.Parse(p.dateFormat(), date)
 			if perr != nil {
 				firstErr = fmt.Errorf("parse date %q at index %d: %w", date, i, perr)
 				return false

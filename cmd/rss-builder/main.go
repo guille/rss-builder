@@ -2,29 +2,20 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/guille/rss-builder/internal/rss"
-	"github.com/guille/rss-builder/internal/sites/gabriel_albiac"
-	"github.com/guille/rss-builder/internal/sites/ghostty"
-	"github.com/guille/rss-builder/internal/sites/kirshatrov"
-	"github.com/guille/rss-builder/internal/sites/rory_sutherland"
+	sites "github.com/guille/rss-builder/internal/sites"
 )
 
-type Parser interface {
-	Name() string
-	URL() string
-	Fetch() ([]rss.Item, error)
-}
-
 func main() {
-	parsers := []Parser{
-		gabriel_albiac.Parser{},
-		rory_sutherland.Parser{},
-		kirshatrov.Parser{},
-		ghostty.Parser{},
+	var httpClient = &http.Client{
+		Timeout: 10 * time.Second,
 	}
+	parsers := sites.BuildAll(httpClient)
 
 	const outputDir = "output"
 	if err := os.Mkdir(outputDir, 0o755); err != nil && !os.IsExist(err) {

@@ -1,4 +1,4 @@
-package gabriel_albiac
+package sites
 
 import (
 	"fmt"
@@ -11,54 +11,21 @@ import (
 	"github.com/guille/rss-builder/internal/rss"
 )
 
-const (
-	baseURL    = "https://www.eldebate.com/autor/gabriel-albiac/"
-	dateFormat = "02/01/2006"
-)
-
-type Parser struct{}
-
-func getDescriptionFromArticle(httpClient *http.Client, url string) (string, error) {
-	// Try to get the description from inside the article
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("User-Agent", "rss-builder")
-
-	res, err := httpClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return "", err
-	}
-
-	doc, err := goquery.NewDocumentFromReader(res.Body)
-	if err != nil {
-		return "", err
-	}
-
-	description := doc.Find("h2.c-detail__subtitle").First().Text()
-	return strings.TrimSpace(description), nil
+type AlbiacParser struct {
+	httpClient *http.Client
 }
 
-func (Parser) Name() string { return "Gabriel Albiac (El Debate)" }
-func (Parser) URL() string  { return baseURL }
-func (Parser) Fetch() ([]rss.Item, error) {
-	var httpClient = &http.Client{
-		Timeout: 10 * time.Second,
-	}
-
-	req, err := http.NewRequest(http.MethodGet, baseURL, nil)
+func (AlbiacParser) Name() string       { return "Gabriel Albiac (El Debate)" }
+func (AlbiacParser) URL() string        { return "https://www.eldebate.com/autor/gabriel-albiac/" }
+func (AlbiacParser) dateFormat() string { return "02/01/2006" }
+func (p AlbiacParser) Fetch() ([]rss.Item, error) {
+	req, err := http.NewRequest(http.MethodGet, p.URL(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 	req.Header.Set("User-Agent", "rss-builder")
 
-	res, err := httpClient.Do(req)
+	res, err := p.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("fetch eldebate: %w", err)
 	}
@@ -97,7 +64,7 @@ func (Parser) Fetch() ([]rss.Item, error) {
 				return false
 			}
 			inputDate := strings.TrimSpace(dateSel.Text())
-			parsedDate, perr := time.Parse(dateFormat, inputDate)
+			parsedDate, perr := time.Parse(p.dateFormat(), inputDate)
 			if perr != nil {
 				firstErr = fmt.Errorf("parse date %q at index %d: %w", inputDate, i, perr)
 				return false
@@ -114,7 +81,7 @@ func (Parser) Fetch() ([]rss.Item, error) {
 				return false
 			}
 			link := fmt.Sprintf("https://www.eldebate.com%v", relativeLink)
-			desc, _ := getDescriptionFromArticle(httpClient, link)
+			desc, _ := p.getDescriptionFromArticle(link)
 
 			items = append(items, rss.Item{
 				Title:       title,
@@ -130,4 +97,31 @@ func (Parser) Fetch() ([]rss.Item, error) {
 		return nil, firstErr
 	}
 	return items, nil
+}
+
+func (p AlbiacParser) getDescriptionFromArticle(url string) (string, error) {
+	// Try to get the description from inside the article
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("User-Agent", "rss-builder")
+
+	res, err := p.httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return "", err
+	}
+
+	doc, err := goquery.NewDocumentFromReader(res.Body)
+	if err != nil {
+		return "", err
+	}
+
+	description := doc.Find("h2.c-detail__subtitle").First().Text()
+	return strings.TrimSpace(description), nil
 }
