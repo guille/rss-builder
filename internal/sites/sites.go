@@ -1,5 +1,5 @@
-// Package model contains shared models used by the program
-package model
+// Package sites implements feed parsers that scrape articles from various websites
+package sites
 
 import (
 	"github.com/guille/rss-builder/internal/rss"

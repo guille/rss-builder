@@ -21,25 +21,9 @@ func (SutherlandParser) URL() string {
 }
 func (SutherlandParser) dateFormat() string { return "2 January 2006" }
 func (p SutherlandParser) Fetch() ([]rss.Item, error) {
-	req, err := http.NewRequest(http.MethodGet, p.URL(), nil)
+	doc, err := fetchDocument(p.httpClient, p.URL())
 	if err != nil {
-		return nil, fmt.Errorf("create request: %w", err)
-	}
-	req.Header.Set("User-Agent", "rss-builder")
-
-	res, err := p.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("fetch spectator: %w", err)
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status: %d", res.StatusCode)
-	}
-
-	doc, err := goquery.NewDocumentFromReader(res.Body)
-	if err != nil {
-		return nil, fmt.Errorf("parse html: %w", err)
+		return nil, fmt.Errorf("fetch document: %w", err)
 	}
 
 	var (

@@ -19,25 +19,9 @@ func (GhosttyParser) Name() string         { return "Ghostty release notes" }
 func (GhosttyParser) URL() string          { return "https://ghostty.org/docs/install/release-notes" }
 func (p GhosttyParser) dateFormat() string { return "January 2, 2006" }
 func (p GhosttyParser) Fetch() ([]rss.Item, error) {
-	req, err := http.NewRequest(http.MethodGet, p.URL(), nil)
+	doc, err := fetchDocument(p.httpClient, p.URL())
 	if err != nil {
-		return nil, fmt.Errorf("create request: %w", err)
-	}
-	req.Header.Set("User-Agent", "rss-builder")
-
-	res, err := p.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("fetch ghostty: %w", err)
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status: %d", res.StatusCode)
-	}
-
-	doc, err := goquery.NewDocumentFromReader(res.Body)
-	if err != nil {
-		return nil, fmt.Errorf("parse html: %w", err)
+		return nil, fmt.Errorf("fetch document: %w", err)
 	}
 
 	var (

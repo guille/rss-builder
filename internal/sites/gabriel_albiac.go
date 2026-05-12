@@ -19,25 +19,9 @@ func (AlbiacParser) Name() string       { return "Gabriel Albiac (El Debate)" }
 func (AlbiacParser) URL() string        { return "https://www.eldebate.com/autor/gabriel-albiac/" }
 func (AlbiacParser) dateFormat() string { return "02/01/2006" }
 func (p AlbiacParser) Fetch() ([]rss.Item, error) {
-	req, err := http.NewRequest(http.MethodGet, p.URL(), nil)
+	doc, err := fetchDocument(p.httpClient, p.URL())
 	if err != nil {
-		return nil, fmt.Errorf("create request: %w", err)
-	}
-	req.Header.Set("User-Agent", "rss-builder")
-
-	res, err := p.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("fetch eldebate: %w", err)
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status: %d", res.StatusCode)
-	}
-
-	doc, err := goquery.NewDocumentFromReader(res.Body)
-	if err != nil {
-		return nil, fmt.Errorf("parse html: %w", err)
+		return nil, fmt.Errorf("fetch document: %w", err)
 	}
 
 	var (
@@ -80,7 +64,7 @@ func (p AlbiacParser) Fetch() ([]rss.Item, error) {
 				firstErr = fmt.Errorf("empty link at index %d", i)
 				return false
 			}
-			link := fmt.Sprintf("https://www.eldebate.com%v", relativeLink)
+			link := "https://www.eldebate.com" + relativeLink
 			desc, _ := p.getDescriptionFromArticle(link)
 
 			items = append(items, rss.Item{
@@ -99,27 +83,11 @@ func (p AlbiacParser) Fetch() ([]rss.Item, error) {
 	return items, nil
 }
 
+// getDescriptionFromArticle tries to extract the description from inside the article in the given url
 func (p AlbiacParser) getDescriptionFromArticle(url string) (string, error) {
-	// Try to get the description from inside the article
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	doc, err := fetchDocument(p.httpClient, url)
 	if err != nil {
-		return "", err
-	}
-	req.Header.Set("User-Agent", "rss-builder")
-
-	res, err := p.httpClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return "", err
-	}
-
-	doc, err := goquery.NewDocumentFromReader(res.Body)
-	if err != nil {
-		return "", err
+		return "", fmt.Errorf("fetch document: %w", err)
 	}
 
 	description := doc.Find("h2.c-detail__subtitle").First().Text()

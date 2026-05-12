@@ -19,25 +19,9 @@ func (KirshatrovParser) Name() string       { return "Kir Shatrov" }
 func (KirshatrovParser) URL() string        { return "https://kirshatrov.com/posts/" }
 func (KirshatrovParser) dateFormat() string { return "January 2006" }
 func (p KirshatrovParser) Fetch() ([]rss.Item, error) {
-	req, err := http.NewRequest(http.MethodGet, p.URL(), nil)
+	doc, err := fetchDocument(p.httpClient, p.URL())
 	if err != nil {
-		return nil, fmt.Errorf("create request: %w", err)
-	}
-	req.Header.Set("User-Agent", "rss-builder")
-
-	res, err := p.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("fetch eldebate: %w", err)
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status: %d", res.StatusCode)
-	}
-
-	doc, err := goquery.NewDocumentFromReader(res.Body)
-	if err != nil {
-		return nil, fmt.Errorf("parse html: %w", err)
+		return nil, fmt.Errorf("fetch document: %w", err)
 	}
 
 	var (
@@ -71,7 +55,7 @@ func (p KirshatrovParser) Fetch() ([]rss.Item, error) {
 
 			inputDate, err := p.getDateFromArticle(link)
 			if err != nil {
-				firstErr = fmt.Errorf("couldn't get date from %s", link)
+				firstErr = fmt.Errorf("couldn't get date from %s: %v", link, err)
 				return false
 			}
 			parsedDate, perr := time.Parse(p.dateFormat(), inputDate)
@@ -96,32 +80,16 @@ func (p KirshatrovParser) Fetch() ([]rss.Item, error) {
 	return items, nil
 }
 
+// getDateFromArticle extracts the article's date from given url's footer
 func (p KirshatrovParser) getDateFromArticle(url string) (string, error) {
-	// Get the Date from the article's footer
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	doc, err := fetchDocument(p.httpClient, url)
 	if err != nil {
-		return "", err
-	}
-	req.Header.Set("User-Agent", "rss-builder")
-
-	res, err := p.httpClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return "", err
-	}
-
-	doc, err := goquery.NewDocumentFromReader(res.Body)
-	if err != nil {
-		return "", err
+		return "", fmt.Errorf("fetch document: %w", err)
 	}
 
 	writtenIn := doc.Find(".text-base")
 	if writtenIn.Length() == 0 {
-		return "", err
+		return "", fmt.Errorf("can't find date text element")
 	}
 	// "Written in December 2025." ... Ugh
 	return strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(writtenIn.Text()), "Written in "), "."), nil

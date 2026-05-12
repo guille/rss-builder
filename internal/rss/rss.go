@@ -1,3 +1,4 @@
+// Package rss provides types and functions for generating RSS 2.0 XML feeds.
 package rss
 
 import (
@@ -37,11 +38,11 @@ func NewGUID(s string) string {
 }
 
 func Write(w io.Writer, channel Channel) error {
-	rss := RSS{
+	feed := RSS{
 		Version: "2.0",
 		Channel: channel,
 	}
-	output, err := xml.MarshalIndent(rss, "", "  ")
+	output, err := xml.MarshalIndent(feed, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal rss: %w", err)
 	}

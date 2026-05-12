@@ -1,6 +1,9 @@
 package main
 
 import (
+	"errors"
+	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -8,7 +11,7 @@ import (
 	"time"
 
 	"github.com/guille/rss-builder/internal/rss"
-	sites "github.com/guille/rss-builder/internal/sites"
+	"github.com/guille/rss-builder/internal/sites"
 )
 
 func main() {
@@ -18,7 +21,7 @@ func main() {
 	parsers := sites.BuildAll(httpClient)
 
 	const outputDir = "output"
-	if err := os.Mkdir(outputDir, 0o755); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(outputDir, 0o755); err != nil && !errors.Is(err, fs.ErrExist) {
 		log.Fatalf("error creating output dir: %v", err)
 	}
 
@@ -28,16 +31,14 @@ func main() {
 		go func() {
 			items, err := parser.Fetch()
 			if err != nil {
-				log.Printf("error fetching %s: %v", parser.Name(), err)
-				errCh <- err
+				errCh <- fmt.Errorf("fetching %s: %v", parser.Name(), err)
 				return
 			}
 
 			filename := filepath.Join(outputDir, parser.Name()+".xml")
 			f, err := os.Create(filename)
 			if err != nil {
-				log.Printf("error creating %s: %v", filename, err)
-				errCh <- err
+				errCh <- fmt.Errorf("creating %s: %v", filename, err)
 				return
 			}
 			defer f.Close()
@@ -50,8 +51,7 @@ func main() {
 			}
 
 			if err := rss.Write(f, channel); err != nil {
-				log.Printf("error writing %s: %v", filename, err)
-				errCh <- err
+				errCh <- fmt.Errorf("writing %s: %v", filename, err)
 				return
 			}
 
@@ -63,6 +63,7 @@ func main() {
 
 	for range parsers {
 		if err := <-errCh; err != nil {
+			log.Printf("error: %v", err)
 			anyErr = true
 		}
 	}
