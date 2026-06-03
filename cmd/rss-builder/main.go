@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/guille/rss-builder/internal/rss"
-	"github.com/guille/rss-builder/internal/sites"
+	"go.guillerg.dev/rss-builder/internal/rss"
+	"go.guillerg.dev/rss-builder/internal/sites"
 )
 
 func main() {

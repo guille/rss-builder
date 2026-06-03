@@ -2,7 +2,7 @@
 package sites
 
 import (
-	"github.com/guille/rss-builder/internal/rss"
+	"go.guillerg.dev/rss-builder/internal/rss"
 )
 
 type Parser interface {

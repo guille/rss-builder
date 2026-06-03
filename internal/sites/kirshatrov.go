@@ -8,7 +8,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 
-	"github.com/guille/rss-builder/internal/rss"
+	"go.guillerg.dev/rss-builder/internal/rss"
 )
 
 type KirshatrovParser struct {

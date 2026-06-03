@@ -1,4 +1,4 @@
-module github.com/guille/rss-builder
+module go.guillerg.dev/rss-builder
 
 go 1.26.3
 
