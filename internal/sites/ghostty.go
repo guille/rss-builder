@@ -78,5 +78,8 @@ func (p GhosttyParser) Fetch() ([]rss.Item, error) {
 	if firstErr != nil {
 		return nil, firstErr
 	}
+	if len(items) == 0 {
+		return nil, fmt.Errorf("no items found — the site layout may have changed")
+	}
 	return items, nil
 }
