@@ -11,5 +11,6 @@ func BuildAll(httpClient *http.Client) []Parser {
 		SutherlandParser{httpClient: httpClient},
 		KirshatrovParser{httpClient: httpClient},
 		SanmiguelParser{httpClient: httpClient},
+		NewCriterionDispatchParser{httpClient: httpClient},
 	}
 }
