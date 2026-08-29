@@ -1,0 +1,9 @@
+version: "2"
+
+linters:
+  settings:
+    errcheck:
+      # Closing a response body we have finished reading reports nothing
+      # actionable. Closing anything we wrote to does, so it stays checked.
+      exclude-functions:
+        - (io.ReadCloser).Close
