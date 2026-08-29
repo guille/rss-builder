@@ -2,6 +2,7 @@ package sites
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -11,13 +12,19 @@ import (
 	"go.guillerg.dev/rss-builder/internal/rss"
 )
 
+const (
+	sanmiguelBaseURL = "https://www.vozpopuli.com"
+	sanmiguelContent = "div.post-container"
+	sanmiguelJunk    = ".ad-slot-mobile, .ad-slot-content, .recirculation-block, .recirculation-posts, .post-contributions, #comments-content"
+)
+
 type SanmiguelParser struct {
 	httpClient *http.Client
 }
 
 func (SanmiguelParser) Name() string { return "Jorge San Miguel (Vozpopuli)" }
 func (SanmiguelParser) URL() string {
-	return "https://www.vozpopuli.com/redaccion/jorge-san-miguel-lobeto"
+	return sanmiguelBaseURL + "/redaccion/jorge-san-miguel-lobeto"
 }
 func (SanmiguelParser) dateFormat() string { return time.RFC3339 }
 func (p SanmiguelParser) Fetch() ([]rss.Item, error) {
@@ -45,7 +52,13 @@ func (p SanmiguelParser) Fetch() ([]rss.Item, error) {
 				return false
 			}
 
-			inputDate, err := p.getDateFromArticle(link)
+			article, err := fetchDocument(p.httpClient, link)
+			if err != nil {
+				firstErr = fmt.Errorf("fetch %s: %w", link, err)
+				return false
+			}
+
+			inputDate, err := p.getDateFromArticle(article)
 			if err != nil {
 				firstErr = fmt.Errorf("couldn't get date from %s: %v", link, err)
 				return false
@@ -56,12 +69,18 @@ func (p SanmiguelParser) Fetch() ([]rss.Item, error) {
 				return false
 			}
 
+			content, cerr := articleHTML(article, sanmiguelContent, sanmiguelBaseURL, sanmiguelJunk)
+			if cerr != nil {
+				log.Printf("%s: content for %s: %v", p.Name(), link, cerr)
+			}
+
 			items = append(items, rss.Item{
 				Title:       title,
 				Link:        link,
 				Description: "",
 				GUID:        rss.NewGUID(link),
 				PubDate:     parsedDate.Format(rss.PubDateFormat),
+				Content:     rss.NewCDATA(content),
 			})
 			return true
 		})
@@ -75,13 +94,8 @@ func (p SanmiguelParser) Fetch() ([]rss.Item, error) {
 	return items, nil
 }
 
-// getDateFromArticle extracts the article's date from the given url
-func (p SanmiguelParser) getDateFromArticle(url string) (string, error) {
-	doc, err := fetchDocument(p.httpClient, url)
-	if err != nil {
-		return "", fmt.Errorf("fetch document: %w", err)
-	}
-
+// getDateFromArticle extracts the article's date from its header
+func (p SanmiguelParser) getDateFromArticle(doc *goquery.Document) (string, error) {
 	publication := doc.Find("div.post-publication-date time")
 	if publication.Length() == 0 {
 		return "", fmt.Errorf("can't find date text element")

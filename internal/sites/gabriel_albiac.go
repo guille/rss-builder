@@ -2,6 +2,7 @@ package sites
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -11,12 +12,18 @@ import (
 	"go.guillerg.dev/rss-builder/internal/rss"
 )
 
+const (
+	albiacBaseURL = "https://www.eldebate.com"
+	albiacContent = "div.c-detail__body"
+	albiacJunk    = "div.content-add, .c-detail__box, .c-detail__tags, .c-detail__comments, aside"
+)
+
 type AlbiacParser struct {
 	httpClient *http.Client
 }
 
 func (AlbiacParser) Name() string       { return "Gabriel Albiac (El Debate)" }
-func (AlbiacParser) URL() string        { return "https://www.eldebate.com/autor/gabriel-albiac/" }
+func (AlbiacParser) URL() string        { return albiacBaseURL + "/autor/gabriel-albiac/" }
 func (AlbiacParser) dateFormat() string { return "02/01/2006" }
 func (p AlbiacParser) Fetch() ([]rss.Item, error) {
 	doc, err := fetchDocument(p.httpClient, p.URL())
@@ -64,8 +71,8 @@ func (p AlbiacParser) Fetch() ([]rss.Item, error) {
 				firstErr = fmt.Errorf("empty link at index %d", i)
 				return false
 			}
-			link := "https://www.eldebate.com" + relativeLink
-			desc, _ := p.getDescriptionFromArticle(link)
+			link := albiacBaseURL + relativeLink
+			desc, content := p.articleParts(link)
 
 			items = append(items, rss.Item{
 				Title:       title,
@@ -73,6 +80,7 @@ func (p AlbiacParser) Fetch() ([]rss.Item, error) {
 				Description: desc,
 				GUID:        rss.NewGUID(link),
 				PubDate:     parsedDate.Format(rss.PubDateFormat),
+				Content:     content,
 			})
 			return true
 		})
@@ -86,13 +94,20 @@ func (p AlbiacParser) Fetch() ([]rss.Item, error) {
 	return items, nil
 }
 
-// getDescriptionFromArticle tries to extract the description from inside the article in the given url
-func (p AlbiacParser) getDescriptionFromArticle(url string) (string, error) {
+// articleParts fetches the article page once and pulls out its subtitle and
+// body. Both are best-effort: losing them costs a poorer item, not the feed.
+func (p AlbiacParser) articleParts(url string) (string, *rss.CDATA) {
 	doc, err := fetchDocument(p.httpClient, url)
 	if err != nil {
-		return "", fmt.Errorf("fetch document: %w", err)
+		log.Printf("%s: fetch %s: %v", p.Name(), url, err)
+		return "", nil
 	}
 
-	description := doc.Find("h2.c-detail__subtitle").First().Text()
-	return strings.TrimSpace(description), nil
+	desc := strings.TrimSpace(doc.Find(".c-detail__subtitle").First().Text())
+
+	content, err := articleHTML(doc, albiacContent, albiacBaseURL, albiacJunk)
+	if err != nil {
+		log.Printf("%s: content for %s: %v", p.Name(), url, err)
+	}
+	return desc, rss.NewCDATA(content)
 }

@@ -77,9 +77,10 @@ func (p NewCriterionDispatchParser) Fetch() ([]rss.Item, error) {
 		}
 		link := it.Alternate[0].Href
 
+		content := strings.TrimSpace(it.Content.Content)
 		desc := strings.TrimSpace(it.Summary.Content)
 		if desc == "" {
-			desc = strings.TrimSpace(it.Content.Content)
+			desc = content
 		}
 
 		pub := time.UnixMilli(it.Published).UTC().Format(rss.PubDateFormat)
@@ -90,6 +91,7 @@ func (p NewCriterionDispatchParser) Fetch() ([]rss.Item, error) {
 			Description: desc,
 			GUID:        rss.NewGUID(link),
 			PubDate:     pub,
+			Content:     rss.NewCDATA(content),
 		})
 	}
 

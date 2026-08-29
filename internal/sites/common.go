@@ -3,6 +3,8 @@ package sites
 import (
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -27,4 +29,43 @@ func fetchDocument(client *http.Client, url string) (*goquery.Document, error) {
 	}
 
 	return goquery.NewDocumentFromReader(res.Body)
+}
+
+// nonContent is dropped from every article body
+const nonContent = "script, style, noscript, iframe, form, template, button"
+
+// articleHTML returns the inner HTML of the first node matching container, with
+// relative links resolved against base. junk holds extra selectors to drop, for
+// the ads and recirculation widgets sites like to interleave with the prose.
+func articleHTML(doc *goquery.Document, container, base string, junk ...string) (string, error) {
+	sel := doc.Find(container).First()
+	if sel.Length() == 0 {
+		return "", fmt.Errorf("no content matching %q", container)
+	}
+
+	sel.Find(strings.Join(append([]string{nonContent}, junk...), ", ")).Remove()
+	// srcset values are relative and not worth resolving; readers fall back to
+	// the <img> the <picture> wraps
+	sel.Find("picture > source").Remove()
+
+	baseURL, err := url.Parse(base)
+	if err != nil {
+		return "", fmt.Errorf("parse base %q: %w", base, err)
+	}
+	absolutise(sel, "a[href]", "href", baseURL)
+	absolutise(sel, "img[src]", "src", baseURL)
+
+	return sel.Html()
+}
+
+// absolutise rewrites attr on every node matching selector into an absolute URL
+func absolutise(sel *goquery.Selection, selector, attr string, base *url.URL) {
+	sel.Find(selector).Each(func(_ int, s *goquery.Selection) {
+		ref, _ := s.Attr(attr)
+		abs, err := base.Parse(ref)
+		if err != nil {
+			return
+		}
+		s.SetAttr(attr, abs.String())
+	})
 }

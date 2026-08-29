@@ -7,14 +7,18 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"strings"
 )
 
 const PubDateFormat = "Mon, 02 Jan 2006 15:04:05 MST" // RFC-822 with 4-digit year
 
+const contentNS = "http://purl.org/rss/1.0/modules/content/"
+
 type RSS struct {
-	XMLName xml.Name `xml:"rss"`
-	Version string   `xml:"version,attr"`
-	Channel Channel  `xml:"channel"`
+	XMLName   xml.Name `xml:"rss"`
+	Version   string   `xml:"version,attr"`
+	ContentNS string   `xml:"xmlns:content,attr"`
+	Channel   Channel  `xml:"channel"`
 }
 
 type Channel struct {
@@ -30,6 +34,21 @@ type Item struct {
 	Description string `xml:"description"`
 	GUID        string `xml:"guid"`
 	PubDate     string `xml:"pubDate"`
+	Content     *CDATA `xml:"content:encoded"`
+}
+
+// CDATA holds a value that must not be entity-escaped, such as an article body
+type CDATA struct {
+	Value string `xml:",cdata"`
+}
+
+// NewCDATA returns nil for blank input so the element is left out altogether
+func NewCDATA(s string) *CDATA {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil
+	}
+	return &CDATA{Value: s}
 }
 
 func NewGUID(s string) string {
@@ -39,8 +58,9 @@ func NewGUID(s string) string {
 
 func Write(w io.Writer, channel Channel) error {
 	feed := RSS{
-		Version: "2.0",
-		Channel: channel,
+		Version:   "2.0",
+		ContentNS: contentNS,
+		Channel:   channel,
 	}
 	output, err := xml.MarshalIndent(feed, "", "  ")
 	if err != nil {
