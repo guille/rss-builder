@@ -8,6 +8,10 @@ run         = "go run cmd/rss-builder/main.go"
 [tasks.clean]
 run = ["go clean", "rm -- output/*.xml"]
 
+[tasks.test]
+depends = ["fmt"]
+run     = ["gotestsum ./..."]
+
 [tasks.fmt]
 run = "go fmt ./..."
 
@@ -26,13 +30,13 @@ hide    = true  # use check
 depends = ["fmt"]
 run     = "golangci-lint run ./..."
 
-[tasks.govulncheck]
+[tasks.vulns]
 hide    = true  # use check
 depends = ["fmt"]
 run     = "govulncheck ./..."
 
 [tasks.check]
-depends = ["vet", "fix", "golangci-lint", "govulncheck"]
+depends = ["vet", "fix", "golangci-lint", "test"]
 
 [tasks.build]
 depends = ["fmt"]

@@ -1,6 +1,7 @@
 package sites
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -8,6 +9,31 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 )
+
+// fetchJSON uses the given client to make a Get request to the given url and
+// decode a successful response body into v
+func fetchJSON(client *http.Client, url string, v any) error {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("User-Agent", "rss-builder")
+
+	res, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("fetch: %w", err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status: %d", res.StatusCode)
+	}
+
+	if err := json.NewDecoder(res.Body).Decode(v); err != nil {
+		return fmt.Errorf("decode json: %w", err)
+	}
+	return nil
+}
 
 // fetchDocument uses the given client to make a Get request to the given url
 // and build a goquery Document from a successful response body

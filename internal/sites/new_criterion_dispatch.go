@@ -1,7 +1,6 @@
 package sites
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -49,25 +48,9 @@ func (p NewCriterionDispatchParser) Fetch() ([]rss.Item, error) {
 	streamID := "feed/" + url.QueryEscape(newCriterionDispatchFeedURL)
 	apiURL := "https://cloud.feedly.com/v3/streams/contents?streamId=" + streamID + "&count=20"
 
-	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
-	if err != nil {
-		return nil, fmt.Errorf("create request: %w", err)
-	}
-	req.Header.Set("User-Agent", "rss-builder")
-
-	res, err := p.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("fetch: %w", err)
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status: %d", res.StatusCode)
-	}
-
 	var stream feedlyStream
-	if err := json.NewDecoder(res.Body).Decode(&stream); err != nil {
-		return nil, fmt.Errorf("decode json: %w", err)
+	if err := fetchJSON(p.httpClient, apiURL, &stream); err != nil {
+		return nil, err
 	}
 
 	var items []rss.Item
