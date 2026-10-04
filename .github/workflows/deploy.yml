@@ -9,6 +9,25 @@ permissions:
   contents: read
 
 jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      deployments: write
+    steps:
+      - name: 🗑 Delete deployment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          DEPLOYMENT_IDS=$(gh api --paginate \
+            "/repos/$GITHUB_REPOSITORY/deployments?environment=github-pages&per_page=100" \
+            --jq '.[].id')
+          for ID in $DEPLOYMENT_IDS; do
+            gh api --method POST "/repos/$GITHUB_REPOSITORY/deployments/$ID/statuses" \
+              -f state=inactive --silent
+            gh api --method DELETE "/repos/$GITHUB_REPOSITORY/deployments/$ID" --silent
+          done
+
   build:
     runs-on: ubuntu-latest
     steps:
@@ -22,7 +41,7 @@ jobs:
           path: ./output
 
   deploy:
-    needs: build
+    needs: [build, cleanup]
 
     permissions:
       pages: write # to deploy to Pages
