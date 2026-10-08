@@ -12,6 +12,7 @@ func BuildAll(httpClient *http.Client) []Parser {
 		KirshatrovParser{httpClient: httpClient},
 		SanmiguelParser{httpClient: httpClient},
 		NewCriterionDispatchParser{httpClient: httpClient},
+		ECBMopoParser{httpClient: httpClient},
 		KoboParser{httpClient: httpClient, device: koboLibra2Device, label: "Kobo Libra 2"},
 	}
 }
